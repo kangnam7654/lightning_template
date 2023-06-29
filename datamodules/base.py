@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Union
 from pathlib import Path
 
+import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-
-from utils.data.preprocess.image_process import image_preprocess
+from torchvision.transforms.functional import to_tensor
 
 
 class BaseDatamodule(Dataset, ABC):
@@ -18,9 +18,12 @@ class BaseDatamodule(Dataset, ABC):
     def __getitem__(self, index):
         pass
 
-    @abstractmethod
-    def image_process(self):
-        pass
+    def image_process(self, image_path):
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # BGR -> RGB
+        image = to_tensor(image)  # np.uint8 -> tensor (0, 1)
+        image = image.sub(0.5).div(0.5)
+        return image
 
     def glob_files(self, root_dir: Union[Path, str], suffixes: Union[str, list, tuple]):
         files = []

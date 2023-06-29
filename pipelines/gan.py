@@ -81,7 +81,7 @@ class GANPipeline(BasePipeline):
         latent_shape = [bs, 39, 1, 1]
 
         # Latent Vectors
-        z = self._gaussian_sample(latent_shape, sigma=1, type_as=image)
+        z = self.gaussian_sampling(latent_shape, sigma=1, type_as=image)
         label = label.type_as(image)
 
         # ==== Discriminator ====
@@ -90,8 +90,8 @@ class GANPipeline(BasePipeline):
             # self._discriminator_loop(image, label, view_shape)
 
         # ==== Generator =====
-        gen_z = self._generator_loop(image, z, view_shape)
-        gen_label = self._generator_loop(image, label, view_shape, is_label=True)
+        gen_z = self.generator_loop(image, z, view_shape)
+        gen_label = self.generator_loop(image, label, view_shape, is_label=True)
 
         # WANDB 이미지 로깅
         if self._image_logging_counter % self.image_logging_interval == 0:
@@ -108,7 +108,7 @@ class GANPipeline(BasePipeline):
         bs = image.shape[0]
 
         # 잠재 벡터 샘플
-        z = self._gaussian_sample([bs, 39, 1, 1], type_as=image)  # Latent Vector
+        z = self.gaussian_sampling([bs, 39, 1, 1], type_as=image)  # Latent Vector
         label = label.type_as(image)
 
         fake_image = self(z)
@@ -144,14 +144,9 @@ class GANPipeline(BasePipeline):
         self._average_fid_score = 0
         self._valid_step_counter = 0
 
-    def _generator_loop(self, image, z, view_shape, is_label=False):
-        self.toggle_optimizer(self.generator_optimizer)
-
-        # 기울기 초기화
-        self.generator_optimizer.zero_grad()
-
+    def generator_loop(self, image, z, view_shape, is_label=False):
         # 이미지 생성
-        fake_image = self(z)
+        fake_image = self.generator(z)
         fake_image_prediction = self.discriminator(fake_image)
         fake_image_prediction = fake_image_prediction.view(view_shape)
 
@@ -183,14 +178,12 @@ class GANPipeline(BasePipeline):
         #     # 로깅
 
         # 역전파
+        self.generator_optimizer.zero_grad()
         self.manual_backward(loss)
         self.generator_optimizer.step()
-        self.untoggle_optimizer(self.generator_optimizer)
         return fake_image
 
     def _discriminator_loop(self, image, z, view_shape):
-        self.toggle_optimizer(self.discriminator_optimizer)
-
         # 기울기 초기화
         self.discriminator_optimizer.zero_grad()
 
@@ -244,9 +237,6 @@ class GANPipeline(BasePipeline):
     def _compute_distribution_loss(self, y_hat, y):
         return F.binary_cross_entropy(y_hat, y)
 
-    def _compute_least_square_loss(self):
-        pass
-
     def configure_optimizers(self):
         generator_optimizer = torch.optim.Adam(
             self.generator.parameters(), lr=self.lr_g, betas=(0.5, 0.999)
@@ -256,10 +246,8 @@ class GANPipeline(BasePipeline):
         )
         return generator_optimizer, discriminator_optimizer
 
-    def _gaussian_sample(self, shape, sigma=1, type_as=None, gender=0):
-        # z = torch.rand(shape) * 2 - 1
-        z = torch.randn(shape) * sigma
-        z[:, 38, :, :] = gender
+    def gaussian_sampling(self, shape, type_as=None):
+        z = torch.randn(shape)
         if type_as is not None:
             z = z.type_as(type_as)
         return z
