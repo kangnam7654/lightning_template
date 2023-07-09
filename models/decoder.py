@@ -12,7 +12,7 @@ class Decoder(nn.Module):
         self.deconv6 = self.make_layer(128, 128)  # 128
         self.deconv7 = self.make_layer(128, 64)  # 256
         self.deconv8 = self.make_layer(64, 64)  # 512
-        self.deconv8 = self.make_layer(64, 3)  # 512
+        self.deconv9 = self.make_layer(64, 3, is_last=True)  # 512
 
     def forward(self, x):
         x = x.view(x.size(0), -1, 2, 2)
@@ -23,7 +23,8 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         x = self.deconv6(x)
         x = self.deconv7(x)
-        x = self.deconv8(x)
+        # x = self.deconv8(x)
+        x = self.deconv9(x)
         return x
 
     def make_layer(

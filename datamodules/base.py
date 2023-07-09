@@ -12,19 +12,33 @@ from torchvision.transforms.functional import to_tensor
 class BaseDatamodule(Dataset, ABC):
     image_default_suffixes = ["jpg", "jpeg", "png", "bmp", "webp"]
     label_default_suffixes = [".npy"]
-    discrete_dim = 3
 
     @abstractmethod
     def __getitem__(self, index):
         pass
 
-    def image_process(self, image_path):
+    def image_process(self, image_path, resolution=(512, 512)):
         image = cv2.imread(image_path)
+        image = cv2.resize(image, resolution)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # BGR -> RGB
         image = to_tensor(image)  # np.uint8 -> tensor (0, 1)
-        image = image.sub(0.5).div(0.5)
+        image = image.sub(0.5).div(0.5)  # (-1, 1)
         return image
-
+    
+    def tensor_to_image(self, tensor: torch.Tensor):
+        tensor = tensor.clone().detach().cpu()
+        if len(tensor.shape) == 4:
+            tensor = torch.permute(tensor, (0, 2, 3, 1))
+        elif len(tensor.shape) == 3:
+            tensor = torch.permute(tensor, (1, 2, 0))
+        
+        tensor = tensor.add(1).mul(127.5)
+        tensor = torch.clamp(tensor, 0, 255)
+        image= tensor.numpy()
+        image = image.astype(np.uint8)
+        return image
+        
+    
     def glob_files(self, root_dir: Union[Path, str], suffixes: Union[str, list, tuple]):
         files = []
         if isinstance(root_dir, str):

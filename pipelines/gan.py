@@ -17,7 +17,7 @@ class GANPipeline(BasePipeline):
         manual_ckpt_save_path=None,
         lr_g=1e-2,
         lr_d=1e-2,
-        n_critic=2,
+        n_critic=1,
         image_logging_interval=10,
     ):
         super().__init__()
@@ -30,8 +30,8 @@ class GANPipeline(BasePipeline):
         self.lr_d = lr_d
         self.lr_g = lr_g
         (
-            self.generator_optimizer,
-            self.discriminator_optimizer,
+            self.opt_g,
+            self.opt_d,
         ) = self.configure_optimizers()
         self.n_critic = n_critic
         self.image_logging_interval = image_logging_interval
@@ -39,7 +39,8 @@ class GANPipeline(BasePipeline):
         # 체크포인트 저장
         self.manual_ckpt_save_path = manual_ckpt_save_path
         self._best_saved = None
-        self._last_saved = self.rename_ckpt_path(for_last=True)
+        if self.manual_ckpt_save_path is not None:
+            self._last_saved = self.rename_ckpt_path(for_last=True)
 
         self._image_logging_counter = 1
         self._highest_metric_score = 1e8
@@ -47,7 +48,7 @@ class GANPipeline(BasePipeline):
         self._average_fid_score = 0
         self._valid_step_counter = 0
         self._show = True
-        self.latent_shape = [2048, 1, 1]
+        self.latent_shape = [1]
 
     def forward(self, z):
         image = self.generator(z)
@@ -55,28 +56,37 @@ class GANPipeline(BasePipeline):
 
     def training_step(self, batch, batch_idx):
         image = batch[0]
+
         # assert isinstance(image, torch.Tensor)
         bs = image.size(0)
         latent_shape = [bs] + self.latent_shape
 
         # ==== Discriminator ====
+        # self.toggle_optimizer(self.opt_d)
         for _ in range(self.n_critic):
-            d_real_loss, d_fake_loss, d_fake_image = self.discriminator_loop(
-                image, latent_shape
-            )
-            d_loss = d_real_loss + d_fake_loss
-            self.d_backward(d_loss)
-            d_to_log = {
-                "d_real_loss": d_real_loss,
-                "d_fake_loss": d_fake_loss,
-                "d_loss": d_loss,
-            }
-            self.log_dict(d_to_log)
+            d_loss, d_fake_image = self.discriminator_loop(image, latent_shape)
+
+            # backward
+            self.opt_d.zero_grad()
+            self.manual_backward(d_loss)
+            self.opt_d.step()
+            
+            d_to_log = {"d_loss": d_loss}
+            self.log_dict(d_to_log, prog_bar=True)
+        # self.untoggle_optimizer(self.opt_d)
+
         # ==== Generator =====
+        # self.toggle_optimizer(self.opt_g)
         g_loss, g_fake_image = self.generator_loop(image, latent_shape)
-        self.g_backward(g_loss)
+
+        # backward
+        self.opt_g.zero_grad()
+        self.manual_backward(g_loss)
+        self.opt_g.step()
+
         g_to_log = {"g_loss": g_loss}
-        self.log_dict(g_to_log)
+        self.log_dict(g_to_log, prog_bar=True)
+        # self.untoggle_optimizer(self.opt_g)
 
         # # TODO WANDB 이미지 로깅
         # if self._image_logging_counter % self.image_logging_interval == 0:
@@ -98,7 +108,7 @@ class GANPipeline(BasePipeline):
 
         # TODO ============== FID metic =============
         # fid_score = calculate_fid(
-        #     real_images=image, generated_images=fake_label_image, batch_size=bs
+        #     real_images=image, generate=fake_label_image, batch_size=bs
         # )
 
         # 평균 fid 점수 구함
@@ -126,25 +136,22 @@ class GANPipeline(BasePipeline):
 
     def configure_optimizers(self):
         generator_optimizer = torch.optim.Adam(
-            self.generator.parameters(), lr=self.lr_g, betas=(0.5, 0.999)
+            self.generator.parameters(),
+            lr=self.lr_g,
+            # betas=(0.5, 0.999)
         )
         discriminator_optimizer = torch.optim.Adam(
-            self.discriminator.parameters(), lr=self.lr_d, betas=(0.5, 0.999)
+            self.discriminator.parameters(),
+            lr=self.lr_d,
+            # betas=(0.5, 0.999)
         )
         return generator_optimizer, discriminator_optimizer
 
-    def compute_loss(self, y_hat, y):
-        return F.binary_cross_entropy(y_hat, y)
-
-    def g_backward(self, g_loss):
-        self.generator_optimizer.zero_grad()
-        self.manual_backward(g_loss)
-        self.generator_optimizer.step()
-
-    def d_backward(self, d_loss):
-        self.discriminator_optimizer.zero_grad()
-        self.manual_backward(d_loss)
-        self.discriminator_optimizer.step()
+    def compute_loss(self, prediction, label):
+        # return F.binary_cross_entropy(y_hat, y)
+        # loss = F.binary_cross_entropy_with_logits(prediction, label)
+        loss = F.mse_loss(prediction, label)
+        return loss
 
     def manual_save_checkpoint(self):
         state_dict = self.state_dict()
@@ -196,36 +203,45 @@ class GANPipeline(BasePipeline):
         self._average_fid_score = 0
         self._valid_step_counter = 0
 
-    def generator_loop(self, image, latent_shape):
+    def generator_loop(self, real_images, latent_shape):
+        # self.generator = self.generator.train()
+        # self.discriminator = self.discriminator.eval()
         # 이미지 생성
-        z = self.gaussian_sampling(latent_shape, type_as=image)
-        fake_image = self.forward(z)
-        fake_image = fake_image.detach()
-        fake_image_prediction = self.discriminator(fake_image)
-
+        z = self.gaussian_sampling(latent_shape, type_as=real_images)
+        fake_images = self.forward(z)
+        fake_image_prediction = self.discriminator(fake_images)
+        # real_image_prediction = self.discriminator(real_images)
         # HARD 라벨
-        real_label = torch.ones_like(fake_image_prediction)
+        real_label = torch.ones_like(fake_image_prediction) * 1
 
+        # loss = self.compute_loss(fake_image_prediction, real_image_prediction)
         loss = self.compute_loss(fake_image_prediction, real_label)
-        return loss, fake_image
+        # loss = 1 - loss
+        return loss, fake_images
 
     def discriminator_loop(self, image, latent_shape):
         # FAKE 처리
+        # self.toggle_optimizer(self.discriminator_optimizer)
+        # self.generator = self.generator.eval()
+        # self.discriminator = self.discriminator.train()
+
         z = self.gaussian_sampling(latent_shape, type_as=image)
         fake_image = self.forward(z)
-        fake_image = fake_image.detach()
         fake_image_prediction = self.discriminator(fake_image)
 
         # REAL 처리
         real_image_prediction = self.discriminator(image)
 
-        real_label = torch.ones_like(real_image_prediction)
-        fake_label = torch.zeros_like(fake_image_prediction)
+        real_labels = torch.ones_like(real_image_prediction) * 0.8
+        fake_labels = torch.zeros_like(fake_image_prediction) * 0.2
         # 손실함수 계산
 
-        fake_loss = self.compute_loss(fake_image_prediction, fake_label)
-        real_loss = self.compute_loss(real_image_prediction, real_label)
-        return real_loss, fake_loss, fake_image
+        # loss = self.compute_loss(fake_image_prediction, real_image_prediction)
+        real_loss = self.compute_loss(real_image_prediction, real_labels)
+        fake_loss = self.compute_loss(fake_image_prediction, fake_labels)
+        d_loss = (real_loss + fake_loss) * 0.5
+        # self.untoggle_optimizer(self.discriminator_optimizer)
+        return d_loss, fake_image
 
     def _get_soften_label(self, shape, real_labels=True, type_as=None):
         noise = torch.rand(shape) * 0.4
@@ -253,9 +269,8 @@ class GANPipeline(BasePipeline):
         cv2.imshow("", image)
         cv2.waitKey(1)
 
-
-    def temp_reconstruct(self, iamge: torch.Tensor):
-        image = F.interpolate(iamge, 512)
+    def temp_reconstruct(self, image: torch.Tensor):
+        # image = F.interpolate(image, 512)
         image = image.clone().detach().cpu().numpy()[0]
         image = (image + 1) * 127.5
         image = np.transpose(image, (1, 2, 0))  # (c, h, w) -> (h, w, c)

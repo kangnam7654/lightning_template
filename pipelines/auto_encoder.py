@@ -136,7 +136,7 @@ class ImitatorPipeline(BasePipeline):
 
     def compute_loss(self, y_hat: torch.Tensor, y: torch.Tensor):
         y_hat = y_hat.view(y.shape)
-        loss = F.l1_loss(y_hat, y)
+        loss = F.mse_loss(y_hat, y)
         return loss
 
     def _can_log_image(self) -> bool:
