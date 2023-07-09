@@ -4,6 +4,7 @@
 __pycache__
 __pypackages__
 lightning_logs
+data/*
 # Created by https://www.toptal.com/developers/gitignore/api/python,pycharm+all,openframeworks+visualstudio,windows,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,pycharm+all,openframeworks+visualstudio,windows,macos
 
