@@ -6,10 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pipelines.metaworld_base import MetaWorldBasePipeline
+from pipelines.base import BasePipeline
 
 
-class VAEPipeline(MetaWorldBasePipeline):
+class VAEPipeline(BasePipeline):
     def __init__(self, encoder, decoder, in_dim=768, lr=None, checkpoint=None):
         super().__init__()
         self.encoder = encoder
@@ -30,7 +30,6 @@ class VAEPipeline(MetaWorldBasePipeline):
     def forward(self, x):
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        z = z.view(z.shape[0], -1, 1, 1)
         reconstructed = self.decode(z)
         return reconstructed, mu, logvar
 
@@ -47,9 +46,8 @@ class VAEPipeline(MetaWorldBasePipeline):
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
-        eps = torch.rand_like(std) * 2 - 1  # Uniform sample(0, 1) -> (0, 2) -> (-1, 1)
+        eps = torch.randn_like(std)  # Gaussian Sample
         z = mu + eps * std
-        z = torch.clamp(z, -1, 1)
         return z
 
     def _load_checkpoint(self):
@@ -87,20 +85,14 @@ class VAEPipeline(MetaWorldBasePipeline):
 
     def loop(self, batch, is_training=True):
         image = batch
-        if is_training:  # 학습
-            self.train()
-            reconstructed, mu, logvar = self.forward(image)
-        else:  # 검증
-            self.eval()
-            with torch.no_grad():
-                reconstructed, mu, logvar = self.forward(image)
-        loss = self._compute_criterion(reconstructed, image, mu, logvar)
+        reconstructed, mu, logvar = self.forward(image)
+        loss = self.compute_criterion(reconstructed, image, mu, logvar)
         # self.image_show(image, reconstructed)
         if self.trainer.global_step % 100 == 0:
             self.image_save(image, reconstructed, self.trainer.global_step)
         return loss
 
-    def _compute_criterion(self, reconstructed, image, mu, logvar):
+    def compute_criterion(self, reconstructed, image, mu, logvar):
         image = F.sigmoid(image)
         reconstructed = F.sigmoid(reconstructed)
         bce = F.binary_cross_entropy(reconstructed, image, reduction="sum")
