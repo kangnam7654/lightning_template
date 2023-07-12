@@ -35,23 +35,23 @@ class Generator_(nn.Module):
         super(Generator_, self).__init__()
         self.layer1 = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(100, 512, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(100, 512, 4, 1, 0, bias=True),
             nn.BatchNorm2d(512),
             nn.ReLU(True))
         self.layer2 = self.make_layer(512, 512) # 8
         self.layer3 = self.make_layer(512, 256) # 16
         self.layer4 = self.make_layer(256, 256) # 32
         self.layer5 = self.make_layer(256, 128)# 64
-        self.layer6 = self.make_layer(128, 128)# 128
+        self.layer6 = self.make_layer(128, 64)# 128
         # self.layer7 = self.make_layer(128, 64)# 256
-        self.layer7 = nn.Sequential(nn.ConvTranspose2d(128, 3, 4, 2, 1, bias=False),  nn.Tanh())
+        self.layer7 = nn.Sequential(nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=True),  nn.Tanh())
             # state size. ``(nc) x 64 x 64``
 
     def make_layer(self, in_dim, out_dim):
         layer = nn.Sequential(
-            nn.ConvTranspose2d(in_dim, out_dim, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(in_dim, out_dim, 4, 2, 1, bias=True),
             nn.BatchNorm2d(out_dim),
-            nn.ReLU(True))
+            nn.LeakyReLU(True))
         return layer
         
     def forward(self, x):
@@ -66,11 +66,11 @@ class Generator_(nn.Module):
         x = self.layer7(x)
         return x
     
-class Discriminator(nn.Module):
+class Discriminator_(nn.Module):
     def __init__(self):
-        super(Discriminator, self).__init__()
+        super(Discriminator_, self).__init__()
         # input is ``(nc) x 64 x 64``)
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, 4, 2, 1, bias=False),   nn.LeakyReLU(0.2, inplace=True)) # 512
+        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, 4, 2, 1, bias=True),   nn.LeakyReLU(0.2, inplace=True)) # 512
             # state size. ``(ndf) x 32 x 32``
         self.layer2 = self.make_layer(64, 64) # 256
         self.layer3 = self.make_layer(64, 128) # 128
@@ -81,14 +81,12 @@ class Discriminator(nn.Module):
         # self.layer8 = self.make_layer(512, 512)#4
         self.layer7 = nn.Sequential(
             # state size. ``(ndf*8) x 4 x 4``
-            nn.Conv2d(256, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
+            nn.Conv2d(256, 1, 4, 1, 0, bias=True),
         )
     
     def make_layer(self, in_dim, out_dim):
         layer = nn.Sequential(
-            nn.Conv2d(in_dim, out_dim, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(out_dim),
+            nn.Conv2d(in_dim, out_dim, 4, 2, 1, bias=True),
             nn.LeakyReLU(0.2, inplace=True),
             )
         return layer
@@ -103,6 +101,7 @@ class Discriminator(nn.Module):
         x = self.layer7(x)
         # x = self.layer8(x)
         # x = self.layer9(x)
+        x = x.view(x.size(0), -1)
         return x
     
 def weights_init(m):
@@ -115,19 +114,20 @@ def weights_init(m):
 
 def main():
     # discriminator = ResNet50_()
-    discriminator = Discriminator()
-    generator = Generator_()
+    discriminator = Discriminator_()
+    generator = Generator()
     
     weights_init(discriminator)
     weights_init(generator)
     
     dataset = CustomImageDataset(
         # data_dir="/home/kangnam/datasets/images/cocosets/train2017/",
+        # data_dir="/home/kangnam/datasets/images/kangnam_resize/",
         data_dir="/home/kangnam/datasets/images/sakimichan/",
         return_label=False,
         resolution=(256, 256),
         # data_length=1,
-        data_repeat=100
+        data_repeat=1
     )
     # transform = transforms.Compose(
     # [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -142,12 +142,12 @@ def main():
     # testloader = torch.utils.data.DataLoader(testset, batch_size=32,
     #                                        shuffle=False, num_workers=2)
     pipeline = GANPipeline(
-        discriminator=discriminator, generator=generator, lr_d=2e-4, lr_g=2e-4, n_critic=1
+        discriminator=discriminator, generator=generator, lr_d=5e-4, lr_g=5e-4, n_critic=1
     )
 
     # print(dataset.__len__())
     dataloder = DataLoader(dataset, batch_size=4)
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(max_epochs=100000000)
     trainer.fit(model=pipeline, train_dataloaders=dataloder)
 
 

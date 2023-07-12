@@ -7,11 +7,10 @@ class ResNetBlock(nn.Module):
         self.unlinearity = nn.LeakyReLU(True)
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_dim, out_dim, 3, stride, padding=1, bias=False),
-            nn.BatchNorm2d(out_dim)
+            nn.BatchNorm2d(out_dim),
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(out_dim, out_dim, 3, 1, 1, bias=False),
-            nn.BatchNorm2d(out_dim)
+            nn.Conv2d(out_dim, out_dim, 3, 1, 1, bias=False), nn.BatchNorm2d(out_dim)
         )
         if stride != 1 or in_dim != out_dim:
             self.shortcut = nn.Sequential(
@@ -33,7 +32,6 @@ class ResNetBlock(nn.Module):
 class UpsampleResNetBlock(nn.Module):
     def __init__(self, in_dim, out_dim, stride=1, is_last=False):
         super().__init__()
-        self.unlinearity = nn.LeakyReLU(0.2, True)
         self.conv1 = nn.Sequential(
             # nn.ReflectionPad2d(1),
             nn.Conv2d(in_dim, out_dim, 3, stride, padding=1, bias=False),
@@ -42,33 +40,28 @@ class UpsampleResNetBlock(nn.Module):
         self.conv2 = nn.Sequential(
             # nn.ReflectionPad2d(1),
             nn.Conv2d(out_dim, out_dim, 3, 1, 1, bias=False),
-            nn.BatchNorm2d(out_dim)
+            nn.BatchNorm2d(out_dim),
         )
+        self.unlinearity = nn.LeakyReLU(0.2, True)
         if stride != 1 or in_dim != out_dim:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_dim, out_dim, 1, stride, bias=False),
-            )
+            self.shortcut = nn.Conv2d(in_dim, out_dim, 1, stride, bias=False)
         else:
             self.shortcut = nn.Identity()
-        
+
         if not is_last:
             self.upsample_layer = nn.Sequential(
-                nn.Upsample(
-                    scale_factor=2,
-                ),
-                nn.ReflectionPad2d(1),
-                nn.Conv2d(out_dim, out_dim, 3, 1),
+                nn.UpsamplingNearest2d(scale_factor=2),
+                nn.Conv2d(out_dim, out_dim, 3, 1, 1, bias=False),
             )
         else:
             self.upsample_layer = nn.Sequential(
-                nn.Upsample(
+                nn.UpsamplingNearest2d(
                     scale_factor=2,
                 ),
-                nn.ReflectionPad2d(1),
-                nn.Conv2d(out_dim, out_dim, 3, 1),
-                nn.Tanh()
+                # nn.ReflectionPad2d(1),
+                nn.Conv2d(out_dim, out_dim, 3, 1, 1, bias=False),
+                nn.Tanh(),
             )
-
 
     def forward(self, x):
         residual = x.clone()
