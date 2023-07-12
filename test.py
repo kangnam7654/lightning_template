@@ -132,63 +132,37 @@ class Rectified(nn.Module):
         return out
 
 def main2():
-    discriminator = Discriminator()
-    generator = Generator(100)
+
+    generator = Generator(50)
 
     generator = generator.cuda()
-    discriminator = discriminator.cuda()
     
-    d_opt = torch.optim.Adam(discriminator.parameters(), lr=1e-3)
-    g_opt = torch.optim.Adam(generator.parameters(), lr=1e-3)
+    g_opt = torch.optim.Adam(generator.parameters(), lr=1e-4)
 
     dataset = CustomImageDataset(
-        data_dir=("/home/kangnam/datasets/images/sakimichan/"),
+        data_dir=("/home/kangnam/datasets/images/cocosets/train2017/"),
         resolution=(256, 256),
         return_label=False,
-        # data_length=None,
-        # data_repeat=1000000
+        data_length=1,
+        data_repeat=1000000
     )
-    loader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=2)
+    loader = DataLoader(dataset, batch_size=16, shuffle=True)
 
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
 
-    epochs = 10000
+    epochs = 100
     for epoch in range(epochs):
         for idx, batch in enumerate(loader):
             real_images = batch[0]  # number: torch.Tensor
             real_images = real_images.cuda()
             
             bs = real_images.size(0)
-            z = torch.randn(bs, 100)
-            z = z.cuda()
-            fake_images = generator(z)
-
-            real_labels = torch.ones((bs, 1))
-            real_labels = real_labels.type_as(real_images)
-            fake_labels = torch.zeros((bs, 1))
-            fake_labels = fake_labels.type_as(real_images)
-
-            real_preds = discriminator(real_images)
-            fake_preds = discriminator(fake_images)
-
-            real_loss = criterion(real_preds, real_labels)
-            fake_loss = criterion(fake_preds, fake_labels)
-            d_loss = (real_loss + fake_loss)
-
-            d_opt.zero_grad()
-            d_loss.backward()
-            d_opt.step()
-
             # ======= GENERATOR ====
-            z = torch.randn(bs, 100)
+            z = torch.ones(bs, 50)
             z = z.cuda()
             fake_images = generator(z)
 
-            real_labels = torch.ones((bs, 1))
-            real_labels = real_labels.type_as(real_images)
-
-            fake_preds = discriminator(fake_images.detach())
-            g_loss = criterion(fake_preds, real_labels)
+            g_loss = criterion(fake_images, real_images)
 
             g_opt.zero_grad()
             g_loss.backward()
@@ -200,12 +174,12 @@ def main2():
             image = np.hstack([real_, fake_])
             cv2.imshow("", image)
             cv2.waitKey(1)
-            # if idx % 10 == 0:
-            #     # image = np.transpose(image, (1, 2, 0))
-            #     # image = cv2.resize(image, (256, 128), interpolation=cv2.INTER_NEAREST)
+            if idx % 10 == 0:
+                # image = np.transpose(image, (1, 2, 0))
+                # image = cv2.resize(image, (256, 128), interpolation=cv2.INTER_NEAREST)
 
-            print(
-                    f"epoch: {epoch}, step: {idx}, g_loss: {round(g_loss.item(), 4)}, d_loss: {round(d_loss.item(), 4)}"
+                print(
+                    f"epoch: {epoch}, step: {idx}, g_loss: {round(g_loss.item(), 4)}"
                 )
 
 

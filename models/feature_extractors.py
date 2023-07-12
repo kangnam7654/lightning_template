@@ -18,6 +18,23 @@ class ResNet50FeatureExtractor(nn.Module):
         features = self.feature_extractor(x)
         features = features.view(features.size(0), -1)
         return features
+    
+class ResNet50_(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.feature_extractor = self.build_extractor()
+        self.fc = nn.Sequential(nn.Linear(2048, 1024, bias=False), nn.BatchNorm1d(1024), nn.LeakyReLU(inplace=True), nn.Linear(1024, 1, bias=False))
+
+    def build_extractor(self):
+        resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
+        return feature_extractor
+
+    def forward(self, x):
+        features = self.feature_extractor(x)
+        features = features.view(features.size(0), -1)
+        features = self.fc(features)
+        return features
 
 
 class ResNet152FeatureExtractor(nn.Module):

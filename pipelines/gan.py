@@ -48,7 +48,7 @@ class GANPipeline(BasePipeline):
         self._average_fid_score = 0
         self._valid_step_counter = 0
         self._show = True
-        self.latent_shape = [1]
+        self.latent_shape = [100]
 
     def forward(self, z):
         image = self.generator(z)
@@ -63,6 +63,8 @@ class GANPipeline(BasePipeline):
 
         # ==== Discriminator ====
         # self.toggle_optimizer(self.opt_d)
+        # self.generator = self.generator.eval()
+        # self.discriminator = self.discriminator.train()
         for _ in range(self.n_critic):
             d_loss, d_fake_image = self.discriminator_loop(image, latent_shape)
 
@@ -77,6 +79,8 @@ class GANPipeline(BasePipeline):
 
         # ==== Generator =====
         # self.toggle_optimizer(self.opt_g)
+        # self.generator = self.generator.train()
+        # self.discriminator = self.discriminator.eval()
         g_loss, g_fake_image = self.generator_loop(image, latent_shape)
 
         # backward
@@ -138,20 +142,22 @@ class GANPipeline(BasePipeline):
         generator_optimizer = torch.optim.Adam(
             self.generator.parameters(),
             lr=self.lr_g,
-            # betas=(0.5, 0.999)
+            betas=(0.5, 0.999)
         )
         discriminator_optimizer = torch.optim.Adam(
             self.discriminator.parameters(),
             lr=self.lr_d,
-            # betas=(0.5, 0.999)
+            betas=(0.5, 0.999)
         )
         return generator_optimizer, discriminator_optimizer
 
     def compute_loss(self, prediction, label):
-        # return F.binary_cross_entropy(y_hat, y)
+        return F.binary_cross_entropy(prediction, label)
         # loss = F.binary_cross_entropy_with_logits(prediction, label)
-        loss = F.mse_loss(prediction, label)
-        return loss
+        # loss = 0.5 * torch.pow((prediction - label), 2)
+        # loss = torch.mean(loss)
+        # loss = F.l1_loss(prediction, label)
+        # return loss
 
     def manual_save_checkpoint(self):
         state_dict = self.state_dict()
@@ -212,7 +218,7 @@ class GANPipeline(BasePipeline):
         fake_image_prediction = self.discriminator(fake_images)
         # real_image_prediction = self.discriminator(real_images)
         # HARD 라벨
-        real_label = torch.ones_like(fake_image_prediction) * 1
+        real_label = torch.ones_like(fake_image_prediction)
 
         # loss = self.compute_loss(fake_image_prediction, real_image_prediction)
         loss = self.compute_loss(fake_image_prediction, real_label)
@@ -232,8 +238,8 @@ class GANPipeline(BasePipeline):
         # REAL 처리
         real_image_prediction = self.discriminator(image)
 
-        real_labels = torch.ones_like(real_image_prediction) * 0.8
-        fake_labels = torch.zeros_like(fake_image_prediction) * 0.2
+        real_labels = torch.ones_like(real_image_prediction)
+        fake_labels = torch.zeros_like(fake_image_prediction)
         # 손실함수 계산
 
         # loss = self.compute_loss(fake_image_prediction, real_image_prediction)

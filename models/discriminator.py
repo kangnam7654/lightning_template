@@ -28,12 +28,12 @@ class Discriminator(nn.Module):
         self.conv3 = ResNetBlock(64, 128, 2)  # 1/8
         self.conv4 = ResNetBlock(128, 128, 2)  # 1/16
         self.conv5 = ResNetBlock(128, 256, 2)  # 1/32
-        # self.conv6 = ResNetBlock(256, 256, 2)  # 1/64
-        # self.conv7 = ResNetBlock(256, 512, 2)  # 1/128
-        # self.conv8 = ResNetBlock(512, 1024, 2)  # 1 / 256
+        self.conv6 = ResNetBlock(256, 256, 2)  # 1/64
+        self.conv7 = ResNetBlock(256, 512, 2)  # 1/128
+        self.conv8 = ResNetBlock(512, 512, 2)  # 1 / 256
         # self.conv9 = ResNetBlock(512, 1024, 2)
-        self.attention = AttentionLayer(256)  # Attention 레이어 추가
-        self.fc = nn.Sequential(nn.Linear(256, 1), nn.Sigmoid())
+        # self.attention = AttentionLayer(1024)  # Attention 레이어 추가
+        self.fc = nn.Sequential(nn.Linear(512, 1), nn.Sigmoid())
 
     def forward(self, x):
         x = self.conv1(x)
@@ -41,12 +41,12 @@ class Discriminator(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
-        # x = self.conv6(x)
-        # x = self.conv7(x)
-        # x = self.conv8(x)
+        x = self.conv6(x)
+        x = self.conv7(x)
+        x = self.conv8(x)
         # x = self.conv9(x)
         
-        x = self.attention(x)
+        # x = self.attention(x)
         
         x = x.view(x.size(0), -1)
         x = self.fc(x)
