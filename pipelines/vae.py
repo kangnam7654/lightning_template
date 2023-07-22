@@ -15,7 +15,7 @@ class VAEPipeline(BasePipeline):
         self.encoder = encoder
         self.decoder = decoder
         self._in_dim = in_dim
-        self.latent_dim = 39
+        self.latent_dim = 100
         self.mu_layer = nn.Linear(self._in_dim, self.latent_dim)
         self.logvar_layer = nn.Linear(self._in_dim, self.latent_dim)
         self.lr = lr
@@ -57,7 +57,9 @@ class VAEPipeline(BasePipeline):
             print("모델 CHECKPOINT 불러오기 완료")
 
     def training_step(self, batch, batch_idx):
-        loss, bce, kl_divergence = self.loop(batch, is_training=True)
+        image = batch
+        reconstruct, mu, logvar = self.forward(image)
+        loss, bce, kl_divergence = self.compute_criterion(reconstruct, image, mu, logvar)
         self.cnt += 1
         self.total_train_loss += loss
 
@@ -96,7 +98,9 @@ class VAEPipeline(BasePipeline):
         image = F.sigmoid(image)
         reconstructed = F.sigmoid(reconstructed)
         bce = F.binary_cross_entropy(reconstructed, image, reduction="sum")
-        kl_divergence = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        kl_divergence = -0.5 * torch.sum(
+            1 + logvar - mu.pow(2) - logvar.exp()
+        )  # - 1/2 (1+ ln(var) - mu^2 - e^ln(var)) 
         loss = bce + kl_divergence
         return loss, bce, kl_divergence
 

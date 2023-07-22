@@ -9,12 +9,12 @@ import torchvision
 from .base import BasePipeline
 
 
-class GANPipeline(BasePipeline):
+class StyleGanPipeline(BasePipeline):
     def __init__(
         self,
         generator=None,
         discriminator=None,
-        mapper = None,
+        mapper=None,
         manual_ckpt_save_path=None,
         lr_g=1e-2,
         lr_d=1e-2,
@@ -26,7 +26,7 @@ class GANPipeline(BasePipeline):
         self.generator = generator
         self.discriminator = discriminator
         self.mapper = mapper
-        
+
         # 학습 인자
         self.automatic_optimization = False
         self.lr_d = lr_d
@@ -51,11 +51,23 @@ class GANPipeline(BasePipeline):
         self._valid_step_counter = 0
         self._show = True
         self.latent_shape = [100]
+        self._constant = None
+
+    def style_mapping(self, z):
+        w = self.mapper(z)
+        return w
+
+    def make_constant(self, data):
+        if self._constant is None:
+            self._constant = torch.rand(data.size(0), 512, 4, 4)
+
+    def make_noise(self, data):
+        self._noise = torch.rand(data.size(0), 512, 1, 1)
 
     def forward(self, z):
         image = self.generator(z)
         return image
-        
+
     def training_step(self, batch, batch_idx):
         image = batch[0]
 
@@ -74,12 +86,8 @@ class GANPipeline(BasePipeline):
 
             d_to_log = {"d_loss": d_loss}
             self.log_dict(d_to_log, prog_bar=True)
-        # self.untoggle_optimizer(self.opt_d)
 
         # ==== Generator =====
-        # self.toggle_optimizer(self.opt_g)
-        # self.generator = self.generator.train()
-        # self.discriminator = self.discriminator.eval()
         g_loss, g_fake_image = self.generator_loop(image, latent_shape)
 
         # backward
@@ -223,7 +231,9 @@ class GANPipeline(BasePipeline):
         real_image_prediction = self.discriminator(image)
 
         gp = self.gradient_penalty(self.discriminator, image, fake_image)
-        d_loss = torch.mean(fake_image_prediction) - torch.mean(real_image_prediction) + gp
+        d_loss = (
+            torch.mean(fake_image_prediction) - torch.mean(real_image_prediction) + gp
+        )
         return d_loss, fake_image
 
     def _get_soften_label(self, shape, real_labels=True, type_as=None):
@@ -261,12 +271,11 @@ class GANPipeline(BasePipeline):
         image = image[:, :, ::-1]
         return image
 
-
-    def gradient_penalty(self,discriminator, real_images, fake_images):
+    def gradient_penalty(self, discriminator, real_images, fake_images):
         alpha = torch.randn(real_images.size(0), 1, 1, 1).type_as(real_images)
-        interpolates = (alpha * real_images + ((1 - alpha) * fake_images)).requires_grad_(
-            True
-        )
+        interpolates = (
+            alpha * real_images + ((1 - alpha) * fake_images)
+        ).requires_grad_(True)
         interpolates
         validity = discriminator(interpolates)
         fake = torch.ones_like(validity)
