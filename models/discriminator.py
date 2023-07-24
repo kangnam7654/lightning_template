@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from resnet_block import ResNetBlock
+from models.resnet_block import ResNetBlock
 
 
 class AttentionLayer(nn.Module):
@@ -108,7 +108,7 @@ class StyleBlock(nn.Module):
                 nn.Conv2d(in_dim, 16, 1, 1, 0),
                 nn.LeakyReLU(inplace=True),
                 nn.Conv2d(16, 16, 3, 1, 1),
-                nn.LeakyReLU(inplace=True),
+                nn.LeakyReLU(inplace=False),
             )
             self.l_relu1 = nn.LeakyReLU(inplace=True)
             self.conv2 = nn.Conv2d(16, out_dim, 3, 1, 1)

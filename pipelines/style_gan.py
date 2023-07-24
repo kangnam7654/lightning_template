@@ -64,8 +64,8 @@ class StyleGanPipeline(BasePipeline):
     def make_noise(self, data):
         self._noise = torch.rand(data.size(0), 512, 1, 1)
 
-    def forward(self, z):
-        image = self.generator(z)
+    def forward(self, content, mapped, noise):
+        image = self.generator(content, mapped, noise)
         return image
 
     def training_step(self, batch, batch_idx):
@@ -214,8 +214,19 @@ class StyleGanPipeline(BasePipeline):
 
     def generator_loop(self, real_images, latent_shape):
         # 이미지 생성
-        z = self.gaussian_sampling(latent_shape, type_as=real_images)
-        fake_images = self.forward(z)
+        bs = real_images.size(0)
+        content = torch.rand(bs, 512, 4, 4)
+        content = content.type_as(real_images)
+        
+        
+        z = torch.rand(bs, 512)
+        z = z.type_as(real_images)
+        mapped = self.mapper(z)
+        
+        noise = torch.rand(bs, 512, 1, 1)
+        noise = noise.type_as(real_images)
+        
+        fake_images = self.forward(content, mapped, noise)
         fake_image_prediction = self.discriminator(fake_images)
 
         loss = -torch.mean(fake_image_prediction)
@@ -223,8 +234,18 @@ class StyleGanPipeline(BasePipeline):
 
     def discriminator_loop(self, image, latent_shape):
         # FAKE 처리
-        z = self.gaussian_sampling(latent_shape, type_as=image)
-        fake_image = self.forward(z)
+        bs = image.size(0)
+        content = torch.zeros(bs, 512, 4, 4)
+        content = content.type_as(image)
+        
+        z = torch.randn(bs, 512)
+        z = z.type_as(image)
+        mapped = self.mapper(z)
+        
+        noise = torch.randn(bs, 512, 1, 1)
+        noise = noise.type_as(image)
+        
+        fake_image = self.forward(content, mapped, noise)
         fake_image_prediction = self.discriminator(fake_image)
 
         # REAL 처리
