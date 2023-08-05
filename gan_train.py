@@ -1,4 +1,9 @@
 
+    """
+    주요 기능은 사용자 지정 이미지 데이터 세트를 사용하여 GAN 모델을 교육
+    
+    :param m: 위의 코드는 이미지 생성을 위한 GAN(Generative Adversarial Network) 모델을 정의합니다. 매개변수 분석은 다음과 같습니다
+    """
 import torch.nn as nn
 from pipelines.gan import GANPipeline
 import pytorch_lightning as pl
