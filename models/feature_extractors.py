@@ -83,10 +83,3 @@ class Swinv2Encoder(nn.Module):
         # features = self.pool(features)
         features = features.view(features.size(0), -1)
         return features
-
-    def test():
-        model = ResNet50FeatureExtractor()
-        print(model)
-
-    if __name__ == "__main__":
-        test()
