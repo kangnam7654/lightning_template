@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 import torchvision
 
-from .base import BasePipeline
+from ..kangnam_packages.pipelines.base import BasePipeline
 
 
 class GANPipeline(BasePipeline):

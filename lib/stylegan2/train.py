@@ -9,6 +9,8 @@
 """Train a GAN using the techniques described in the paper
 "Training Generative Adversarial Networks with Limited Data"."""
 
+# This code from Official Implement StyleGAN2-ada- repository
+
 import os
 import click
 import re

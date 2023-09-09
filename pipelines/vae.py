@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pipelines.base import BasePipeline
+from kangnam_packages.pipelines.base import BasePipeline
 
 
 class VAEPipeline(BasePipeline):

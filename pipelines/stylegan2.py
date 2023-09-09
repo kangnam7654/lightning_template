@@ -6,9 +6,8 @@ import torch
 from torch import autograd, optim
 import torch.nn as nn
 import torch.nn.functional as F
-from pipelines.base import BasePipeline
+from kangnam_packages.pipelines.base import BasePipeline
 
-import wandb
 from utils.inception_score import calculate_fid
 from lib.stylegan2.non_leaking import AdaptiveAugment, augment
 
