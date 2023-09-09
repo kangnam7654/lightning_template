@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parents[2]
 sys.path.append(ROOT_DIR.absolute())
 
-from utils.custom_dataset.load_transform import get_transforms
+from data_modules.load_transform import get_transforms
 from utils.custom_dataset.custom_dataloader import CustomDataModule
 
 def build_dataloader(df, cfg, mode):

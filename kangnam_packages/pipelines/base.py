@@ -18,9 +18,10 @@ class BasePipeline(pl.LightningModule):
         # metrics
         self.total_train_loss = None
         self.train_step_counter = None
-
         self.total_valid_loss = None
         self.valid_step_counter = None
+
+        # manual save
         self.manual_save_ckpt_path = None
         self.manual_best = None
         self.manual_last = None
@@ -43,10 +44,10 @@ class BasePipeline(pl.LightningModule):
             m.weight.data.fill_(1)
             m.bias.data.fill_(0)
 
-    def apply_he_init(self, model):
+    def he_init(self, model):
         model.apply(self._he_init_weights)
 
-    def apply_xavier_init(self, model):
+    def xavier_init(self, model):
         model.apply(self._xavier_init_weights)
 
     def tensor_to_image(
