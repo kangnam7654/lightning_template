@@ -11,17 +11,13 @@ class LightningDataWrapper(pl.LightningDataModule):
     def __init__(
         self,
         dataset,
-        batch_size,
-        num_workers=None,
-        valid_batch_size=None,
-        valid_size=None,
+        batch_size: int,
+        num_workers: int = 0,
     ):
         super().__init__()
         self.dataset = dataset
         self.train_batch_size = batch_size
-        self.valid_batch_size = valid_batch_size
         self.train_size = None
-        self.valid_size = valid_size
         self.train_dataset = None
         self.valid_dataset = None
         self.num_workers = num_workers
@@ -40,6 +36,10 @@ class LightningDataWrapper(pl.LightningDataModule):
 
 
 class LightningDataWrapper2(LightningDataWrapper):
+    """
+    Validation을 포함한 Wrapper입니다.
+    """
+
     def __init__(
         self,
         dataset,
