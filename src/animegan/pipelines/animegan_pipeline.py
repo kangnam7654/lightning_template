@@ -3,15 +3,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models.perceptual_loss import VGG16FeatureExtractor
+from models.vgg16_feature_extractor import VGG16FeatureExtractor
 from torch import autograd
 
-# try:
-#     from .base import BasePipeline
-# except ImportError as e:
-#     print(e)
-#     from mvface_packages.pipelines.base import BasePipeline
-from mvface_packages.pipelines.base import BasePipeline
+from kangnam_packages.pipelines.base import BasePipeline
 
 
 class AnimeGANPipeline(BasePipeline):
@@ -122,7 +117,7 @@ class AnimeGANPipeline(BasePipeline):
         else:
             real_images, anime_images = batch  # source, target, edge blurring
             edge_images = self.blur_tensor_image(anime_images)
-            # edge_images = self.rgb_to_grayscale(edge_images)
+            edge_images = self.rgb_to_grayscale(edge_images)
             gray_images = self.rgb_to_grayscale(anime_images)
 
             g_opt, d_opt = self.optimizers()  # optimizers
@@ -150,10 +145,6 @@ class AnimeGANPipeline(BasePipeline):
             참고페이지
                 https://velog.io/@nochesita/%EC%B5%9C%EC%A0%81%ED%99%94%EC%9D%B4%EB%A1%A0-Binary-Cross-Entropy%EC%99%80-Softplus
             """
-            # d_adv_anime_loss = 0.5 * torch.mean((anime_preds - 1) ** 2)
-            # d_adv_gen_loss = 0.5 * torch.mean((gen_preds) ** 2)
-            # d_adv_gray_loss = 0.5 * torch.mean((gray_preds) ** 2)
-            # d_adv_edge_loss = 0.5 * torch.mean((edge_preds) ** 2)
 
             d_adv_anime_loss = F.softplus(-anime_preds).mean()
             d_adv_gen_loss = F.softplus(gen_preds).mean()
