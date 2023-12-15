@@ -78,7 +78,7 @@ class AnimeGANPipeline(BasePipeline):
 
         real_images, _ = batch
         gen_images = self.forward(real_images)
-        g_opt, _ = self.optimizers()
+        g_opt, _ = self.configure_optimizers()
 
         real_feature = self.get_feature(real_images)
         gen_feature = self.get_feature(gen_images)
@@ -232,7 +232,9 @@ class AnimeGANPipeline(BasePipeline):
             self.add_accumulate_dict(self.generator, self.g_accum)
 
             if (self.training_step_counter + 1) % self.accumulate_interval == 0:
-                self.apply_accumulate_dict(self.generator, self.g_accum, self.accumulate_interval)
+                self.apply_accumulate_dict(
+                    self.generator, self.g_accum, self.accumulate_interval
+                )
                 g_opt.step()
 
             self.training_step_counter += 1

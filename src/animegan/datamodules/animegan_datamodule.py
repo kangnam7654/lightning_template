@@ -66,7 +66,7 @@ class AnimeGANDatamodule(BaseDatamodule):
         self.crop_transform = transforms.Compose(
             [
                 transforms.RandomHorizontalFlip(),
-                # transforms.RandomRotation((-15, 15)),
+                transforms.RandomRotation((-15, 15)),
                 transforms.Normalize([0.5], [0.5]),
             ]
         )
@@ -74,14 +74,13 @@ class AnimeGANDatamodule(BaseDatamodule):
         self.no_crop_transform = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.CenterCrop(600),
                 transforms.Resize(
                     (self.resolution, self.resolution),
                     interpolation=transforms.InterpolationMode.NEAREST,
                     antialias=False,
                 ),
                 transforms.RandomHorizontalFlip(),
-                # transforms.RandomRotation((-15, 15)),
+                transforms.RandomRotation((-15, 15)),
                 transforms.Normalize([0.5], [0.5]),
             ]
         )
