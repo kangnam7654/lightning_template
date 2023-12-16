@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -136,8 +135,8 @@ class AnimeGenerator(nn.Module):
 
 
 class AnimeDiscriminator(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self) -> None:
+        super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(3, 32, 3, 1, 1), nn.LeakyReLU())
         self.layer2 = nn.Sequential(
             nn.Conv2d(32, 64, 3, 2, 1),

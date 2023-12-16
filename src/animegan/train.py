@@ -1,6 +1,7 @@
 import os
 import argparse
 import pytorch_lightning as pl
+from pathlib import Path
 import torch
 from datamodules.animegan_datamodule import AnimeGANDatamodule
 from models.animegan import AnimeDiscriminator, Generator
@@ -9,7 +10,6 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from kangnam_packages.datamodules.lightning_wrapper import LightningDataWrapper
-from models.animegan import AnimeDiscriminator
 
 # Model load
 
@@ -100,14 +100,15 @@ def main(args):
     # | 모델 Load |
     # =============
     generator = Generator()
+    cur_file_dir = Path(__file__).parent
     state_dict = torch.load(
-        # "src/animegan/weights/celeba_distill.pt"
-        "src/animegan/weights/face_paint_512_v1.pt"
-        # "src/animegan/weights/face_paint_512_v2.pt"
+        str(cur_file_dir.joinpath("weights", "face_paint_512_v1.pt"))
+        # str(cur_file_dir.joinpath("weights", "celeba_distill.pt"))
+        # str(cur_file_dir.joinpath("weights", "face_paint_512_v2.pt"))
     )
     generator.load_state_dict(state_dict)
-    # discriminator = AnimeDiscriminator()
-    discriminator = Discriminator(256)
+    discriminator = AnimeDiscriminator()
+    # discriminator = Discriminator(256)
 
     pipeline = AnimeGANPipeline(
         generator=generator,
