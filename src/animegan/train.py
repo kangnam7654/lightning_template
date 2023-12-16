@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from kangnam_packages.datamodules.lightning_wrapper import LightningDataWrapper
+from kangnam_packages.stylegan2.model import Discriminator
 
 # Model load
 
