@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # pseudo
 def cutmix(image1, label1, image2, label2):
     width = image1.shape[0]
@@ -10,7 +11,7 @@ def cutmix(image1, label1, image2, label2):
     # adjust ratio
     random_width = np.random.uniform(0, width)
     random_height = (random_lambda * width * height) / random_width
-    
+
     x1 = np.random.uniform(0, random_width)
     x2 = x1 + random_width
     y1 = np.random.uniform(0, random_height)
